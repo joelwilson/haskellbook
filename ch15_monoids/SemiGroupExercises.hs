@@ -116,6 +116,72 @@ type FourAssoc =
 
 -- 6. newtype BoolConj
 newtype BoolConj = BoolConj Bool
+  deriving (Eq, Show)
+
+-- semigroup instance
+instance Semigroup BoolConj where
+  (BoolConj True) <> (BoolConj True)  = BoolConj True
+  _ <> _ = BoolConj False
+
+-- gen func
+boolConjGen :: Gen BoolConj
+boolConjGen = oneof [
+  return $ BoolConj True,
+  return $ BoolConj False ]
+
+-- arb instance
+instance Arbitrary BoolConj where
+  arbitrary = boolConjGen
+
+-- boolConjGen type
+type BoolConjAssoc = BoolConj -> BoolConj -> BoolConj -> Bool
+
+-- 7. newtype BoolDisj
+newtype BoolDisj = BoolDisj Bool
+  deriving (Eq, Show)
+
+instance Semigroup BoolDisj where
+  (BoolDisj False) <> (BoolDisj False) = BoolDisj False
+  _ <> _ = BoolDisj True
+
+boolDisjGen :: Gen BoolDisj
+boolDisjGen = oneof [
+  return $ BoolDisj True,
+  return $ BoolDisj False ]
+
+instance Arbitrary BoolDisj where
+  arbitrary = boolDisjGen
+
+type BoolDisjAssoc = BoolDisj -> BoolDisj -> BoolDisj -> Bool
+
+-- 8. data Or
+data Or a b =
+    Fst a
+  | Snd b
+  deriving (Eq, Show)
+
+instance Semigroup (Or a b) where
+  (Fst a) <> (Fst b) = Fst b
+  (Fst a) <> (Snd b) = Snd b
+  (Snd a) <> _       = Snd a
+
+orGen :: (Arbitrary a, Arbitrary b) => Gen (Or a b)
+orGen = do
+  a <- arbitrary
+  b <- arbitrary
+  oneof [ return $ Fst a,
+          return $ Snd b ]
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Or a b) where
+  arbitrary = orGen
+
+type OrAssoc =
+     Or String String
+  -> Or String String
+  -> Or String String
+  -> Bool
+
+-- 9. data
 
 main :: IO ()
 main = do
@@ -124,3 +190,6 @@ main = do
   quickCheck (semigroupAssoc :: TwoAssoc)
   quickCheck (semigroupAssoc :: ThreeAssoc)
   quickCheck (semigroupAssoc :: FourAssoc)
+  quickCheck (semigroupAssoc :: BoolConjAssoc)
+  quickCheck (semigroupAssoc :: BoolDisjAssoc)
+  quickCheck (semigroupAssoc :: OrAssoc)
