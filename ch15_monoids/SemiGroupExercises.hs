@@ -236,6 +236,70 @@ type ValidationAssoc =
   -> Validation String String
   -> Bool
 
+-- 12. AccumulateRight a b
+newtype AccumulateRight a b =
+  AccumulateRight (Validation a b)
+  deriving (Eq, Show)
+
+instance Semigroup b =>
+  Semigroup (AccumulateRight a b) where
+  (AccumulateRight (Success b)) <> (AccumulateRight (Success b')) =
+    AccumulateRight (Success $ b <> b')
+  (AccumulateRight _) <> (AccumulateRight (Failure a)) =
+    AccumulateRight $ Failure a
+  (AccumulateRight (Failure a)) <> (AccumulateRight _) =
+    AccumulateRight $ Failure a
+
+accumRightGen :: (Arbitrary a, Arbitrary b) => Gen (AccumulateRight a b)
+accumRightGen = do
+  a <- arbitrary
+  b <- arbitrary
+  oneof [ return $ AccumulateRight $ Success b,
+          return $ AccumulateRight $ Failure a ]
+
+instance (Arbitrary a, Arbitrary b) =>
+  Arbitrary (AccumulateRight a b) where
+    arbitrary = accumRightGen
+
+type AccumRightAssoc =
+     AccumulateRight String String
+  -> AccumulateRight String String
+  -> AccumulateRight String String
+  -> Bool
+
+-- 13. AccumulateBoth a b
+newtype AccumulateBoth a b =
+  AccumulateBoth (Validation a b)
+  deriving (Eq, Show)
+
+-- TODO: this seems super verbose. Is there a more conscise way?
+instance (Semigroup a, Semigroup b) =>
+  Semigroup (AccumulateBoth a b) where
+    (AccumulateBoth (Success b)) <> (AccumulateBoth (Success b')) =
+      AccumulateBoth $ Success $ b <> b'
+    (AccumulateBoth (Failure a)) <> (AccumulateBoth (Failure a')) =
+      AccumulateBoth $ Failure $ a <> a'
+    (AccumulateBoth (Success _)) <> (AccumulateBoth (Failure a)) =
+      AccumulateBoth $ Failure a
+    (AccumulateBoth (Failure a)) <> (AccumulateBoth (Success _)) =
+      AccumulateBoth $ Failure a
+
+accumBothGen :: (Arbitrary a, Arbitrary b) => Gen (AccumulateBoth a b)
+accumBothGen = do
+  a <- arbitrary
+  b <- arbitrary
+  oneof [ return $ AccumulateBoth $ Success b,
+          return $ AccumulateBoth $ Failure a ]
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (AccumulateBoth a b) where
+  arbitrary = accumBothGen
+
+type AccumBothAssoc =
+     AccumulateBoth String String
+  -> AccumulateBoth String String
+  -> AccumulateBoth String String
+  -> Bool
+
 main :: IO ()
 main = do
   quickCheck (semigroupAssoc :: TrivialAssoc)
@@ -247,3 +311,5 @@ main = do
   quickCheck (semigroupAssoc :: BoolDisjAssoc)
   quickCheck (semigroupAssoc :: OrAssoc)
   quickCheck (semigroupAssoc :: ValidationAssoc)
+  quickCheck (semigroupAssoc :: AccumRightAssoc)
+  quickCheck (semigroupAssoc :: AccumBothAssoc)
