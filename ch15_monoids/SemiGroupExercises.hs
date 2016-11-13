@@ -1,4 +1,4 @@
-import Test.QuickCheck
+import Test.QuickCheck hiding (Success, Failure)
 import Data.Semigroup as S
 
 ---------------------------------
@@ -196,6 +196,46 @@ instance Semigroup b => Semigroup (Combine a b) where
 -- TODO: Arbitrary instance (use CoArbitrary?)
 -- TODO: association type
 
+-- 10. Comp a
+newtype Comp a =
+  Comp { unComp :: (a -> a) }
+
+instance Semigroup a => Semigroup (Comp a) where
+  (Comp f) <> (Comp g) = Comp $ f . g
+
+-- TODO: try to implement and use CoArbitrary
+
+-- 11. Validation a b
+data Validation a b =
+  Failure a | Success b
+  deriving (Eq, Show)
+
+-- Semigroup only combines failures because this is for validation
+-- where it should validate multiple things and combine the failures.
+instance Semigroup a =>
+  Semigroup (Validation a b) where
+    (Failure a) <> (Failure a') = Failure $ a <> a'
+    (Failure a) <> (Success _)  = Failure a
+    (Success _) <> (Failure a)  = Failure a
+    (Success b) <> (Success _)  = Success b
+
+validationGen :: (Arbitrary a, Arbitrary b) => Gen (Validation a b)
+validationGen = do
+  a <- arbitrary
+  b <- arbitrary
+  oneof [ return $ Success a,
+          return $ Failure b ]
+
+instance (Arbitrary a, Arbitrary b) =>
+  Arbitrary (Validation a b) where
+    arbitrary = validationGen
+
+type ValidationAssoc =
+     Validation String String
+  -> Validation String String
+  -> Validation String String
+  -> Bool
+
 main :: IO ()
 main = do
   quickCheck (semigroupAssoc :: TrivialAssoc)
@@ -206,3 +246,4 @@ main = do
   quickCheck (semigroupAssoc :: BoolConjAssoc)
   quickCheck (semigroupAssoc :: BoolDisjAssoc)
   quickCheck (semigroupAssoc :: OrAssoc)
+  quickCheck (semigroupAssoc :: ValidationAssoc)
