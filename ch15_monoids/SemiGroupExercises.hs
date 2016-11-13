@@ -181,7 +181,20 @@ type OrAssoc =
   -> Or String String
   -> Bool
 
--- 9. data
+-- 9. Combine a b
+-- This one is a bit crazy.
+newtype Combine a b =
+  Combine { unCombine :: (a -> b) }
+
+-- Semigroup instance
+-- Returns a new Combine instance containing a  function which applies
+-- the argument to both functions and then mappends (<>) the results together.
+instance Semigroup b => Semigroup (Combine a b) where
+  (Combine f) <> (Combine g) = Combine $ \x -> (f x) <> (g x)
+
+-- TODO: Gen
+-- TODO: Arbitrary instance (use CoArbitrary?)
+-- TODO: association type
 
 main :: IO ()
 main = do
